@@ -1,0 +1,37 @@
+name: Deploy Azure Web App
+
+on:
+  workflow_call:
+    inputs:
+      appname:
+        type: string
+        required: true
+      docker-image:
+        type: string
+        required: true
+      prefix-allowed-branch:
+        type: string
+        default: 'none'
+    secrets:
+      azure-deploy:
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy on Azure
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || contains(github.ref, inputs.prefix-allowed-branch)
+  
+    steps:
+      - name: Login on Azure
+        uses: Azure/login@v1
+        with:
+          creds: ${{ secrets.azure-deploy }}
+          enable-AzPSSession: true
+
+      - name: Deploying application
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ inputs.appname }}
+          images: ${{ inputs.docker-image }}
+        

@@ -1,0 +1,25 @@
+name: "Create Tag"
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string 
+
+jobs:
+  tag:
+    name: "Create Tag ${{inputs.version}}"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Push Tag
+        id: push-tag
+        run: |
+          echo "tag: ${{inputs.version}}"
+          git tag ${{inputs.version}}
+          git push origin ${{inputs.version}}

@@ -1,0 +1,46 @@
+name: Git Version
+
+on:
+  workflow_call:
+    inputs:
+      gitversion-app:
+        type: string
+        required: false
+        default: "5.12.0"   
+    outputs:
+      version: 
+        description: Calculated application version
+        value: ${{ jobs.versioning.outputs.version }}
+
+jobs:
+  versioning:
+    name: Git Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.gitversion.outputs.SemVer }}
+
+    steps:
+      - name: Downloading code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Installing GitVersion
+        uses: gittools/actions/gitversion/setup@v0
+        with:
+          versionSpec: ${{ inputs.gitversion-app }}
+
+      - name: Determining version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0
+
+      - name: Setting version
+        id: set_version
+        run: |
+          current_branch="${{ github.ref }}"
+          if [ "$current_branch" = "refs/heads/main" ]; then
+            echo "version=$(dotnet-gitversoin /showvariable Semver)" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$(dotnet-gitversoin /showvariable Semver).$(dotnet-gitversoin /showvariable BuildMetaDataPadded)" >> "$GITHUB_OUTPUT"
+          fi
+          

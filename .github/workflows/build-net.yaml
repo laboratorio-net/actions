@@ -1,0 +1,36 @@
+name: Build Skd .NET
+
+on:
+  workflow_call:
+    inputs:
+      dotnet-version:
+        type: string
+        default: "8.0.x"   
+      solution-name:
+        type: string
+        required: true
+        description: Solution name
+
+jobs:  
+  building:
+    name: .Net Building ${{ inputs.dotnet-version }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK ${{ inputs.dotnet-version }}
+        uses: actions/setup-dotnet@v3.2.0
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Restore packages
+        run: dotnet restore ${{ inputs.solution-name }} -v minimal
+        working-directory: ${{ github.workspace }}
+
+      - name: Build
+        run: dotnet build ${{ inputs.solution-name }} --configuration Release --no-restore
+        working-directory: ${{ github.workspace }}
