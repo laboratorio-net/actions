@@ -1,0 +1,33 @@
+name: Build NodeJs
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        type: string
+        required: true
+
+jobs:
+  building:
+    name: NodeJs Building ${{ inputs.node-version }}
+    runs-on: ubuntu-latest
+
+    steps:      
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup NodeJs ${{ inputs.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Restore packages
+        run: npm install
+        working-directory: ${{ github.workspace }}
+
+      - name: Build
+        run: npx webpack --mode production
+        working-directory: ${{ github.workspace }}
+
