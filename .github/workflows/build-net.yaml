@@ -34,3 +34,7 @@ jobs:
       - name: Build
         run: dotnet build ${{ inputs.solution-name }} --configuration Release --no-restore
         working-directory: ${{ github.workspace }}
+      
+      - name: Test
+        run: dotnet test ${{ inputs.solution-name }} --configuration Release --no-restore
+        working-directory: ${{ github.workspace }}
