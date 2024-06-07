@@ -22,7 +22,7 @@ on:
       prefix-allowed-branch:
         type: string
         default: 'none'
-      runon:
+      run-on:
         type: string
         default: ubuntu-latest
     secrets:
@@ -36,7 +36,7 @@ on:
 jobs:
   dockerizing:
     name: Build and publish
-    runs-on: ${{ inputs.runon }}
+    runs-on: ${{ inputs.run-on }}
     if: github.ref == 'refs/heads/main' || contains(github.ref, inputs.prefix-allowed-branch)
     outputs:
       docker-image: ${{ steps.create_tag.outputs.docker-tag }}
