@@ -10,14 +10,14 @@ on:
         type: string
         required: true
         description: Solution name
-      run-on:
+      runs-on:
         type: string
         default: ubuntu-latest
 
 jobs:  
   building:
     name: .Net Building ${{ inputs.dotnet-version }}
-    runs-on: ${{ inputs.run-on }}
+    runs-on: ${{ inputs.runs-on }}
 
     steps:
       - name: Checkout repository
