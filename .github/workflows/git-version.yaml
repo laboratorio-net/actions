@@ -6,7 +6,10 @@ on:
       gitversion-app:
         type: string
         required: false
-        default: "5.12.0"   
+        default: "5.12.0" 
+      run-on:
+        type: string
+        default: ubuntu-latest
     outputs:
       version: 
         description: Calculated application version
@@ -15,7 +18,7 @@ on:
 jobs:
   versioning:
     name: Git Version
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.run-on }}
     outputs:
       version: ${{ steps.gitversion.outputs.SemVer }}
 

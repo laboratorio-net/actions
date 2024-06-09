@@ -12,6 +12,9 @@ on:
       prefix-allowed-branch:
         type: string
         default: 'none'
+      run-on:
+        type: string
+        default: ubuntu-latest
     secrets:
       azure-deploy:
         required: true
@@ -19,7 +22,7 @@ on:
 jobs:
   deploy:
     name: Deploy on Azure
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.run-on }}
     if: github.ref == 'refs/heads/main' || contains(github.ref, inputs.prefix-allowed-branch)
   
     steps:

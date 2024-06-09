@@ -6,11 +6,14 @@ on:
       version:
         required: true
         type: string 
+      run-on:
+        type: string
+        default: ubuntu-latest
 
 jobs:
   tag:
     name: "Create Tag ${{inputs.version}}"
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.run-on }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
