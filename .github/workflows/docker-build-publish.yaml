@@ -16,7 +16,7 @@ on:
         type: string
         required: true
         description: Image name
-      registry-name:
+      registry:
         type: string
         required: false
         default: ""
@@ -55,6 +55,7 @@ jobs:
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
+          registry: ${{ inputs.registry }}
           username: ${{ inputs.username }}
           password: ${{ secrets.usertoken }}
 
@@ -64,10 +65,10 @@ jobs:
       - name: Create tag
         id: create_tag
         run : |
-          if [ -z "${{ inputs.registry-name }}" ]; then
+          if [ -z "${{ inputs.registry }}" ]; then
             echo "docker-tag=${{ inputs.username }}/${{ inputs.image-name}}:${{ inputs.version }}" >> $GITHUB_OUTPUT
           else
-            echo "docker-tag=${{ inputs.registry-name }}/${{ inputs.image-name}}:${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "docker-tag=${{ inputs.registry }}/${{ inputs.image-name}}:${{ inputs.version }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Build and push docker image
