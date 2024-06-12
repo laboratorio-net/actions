@@ -12,10 +12,15 @@ on:
       username:
         type: string
         required: true
-      solution-name:
+      image-name:
         type: string
         required: true
-        description: Solution name
+        description: Image name
+      registry-name:
+        type: string
+        required: false
+        default: ""
+        description: Registry name
       version:
         type: string
         default: latest
@@ -59,7 +64,11 @@ jobs:
       - name: Create tag
         id: create_tag
         run : |
-          echo "docker-tag=${{ inputs.username }}/${{ inputs.solution-name}}:${{ inputs.version }}" >> $GITHUB_OUTPUT
+          if [ -z "${{ inputs.registry-name }}" ]; then
+            echo "docker-tag=${{ inputs.username }}/${{ inputs.image-name}}:${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "docker-tag=${{ inputs.registry-name }}/${{ inputs.image-name}}:${{ inputs.version }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build and push docker image
         uses: docker/build-push-action@v5
