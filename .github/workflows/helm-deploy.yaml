@@ -1,0 +1,54 @@
+name: Deploy K8S
+
+on:
+  workflow_call:
+    inputs:
+      image-version:
+        type: string
+        required: true
+      runs-on:
+        type: string
+        default: ubuntu-latest
+      repo-name:
+        type: string
+        default: labs
+      repo-url:
+        type: string
+        default: https://leandro-alves-labs.github.io/helm-charts
+      chart-name:
+        type: string
+        default: nginx
+      chart-version:
+        type: string
+        default: "0.1.2"
+      release-name:
+        type: string
+        required: true
+      values-file:
+        type: string
+        default: "deployment/values.yaml"
+      
+
+jobs:
+  deploy:
+    name: Deploy Using Helm
+    runs-on: ${{ inputs.runs-on }}
+
+    steps:
+      - name: Downloading code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Add helm repo ${{ inputs.repo-name }}
+        run: |
+          helm repo add ${{ inputs.repo-name }} ${{ inputs.repo-url }}
+
+      - name: Updating Release on K8S ${{ inputs.image-version }}
+        run: |
+          helm upgrade --install \
+          ${{ inputs.release-name }} \
+          ${{ inputs.repo-name }}/${{ inputs.chart-name }} \
+          -f ${{ inputs.values-file }} \
+          --set image.tag=${{ inputs.image-version }} \
+          --version ${{ inputs.chart-version }}
