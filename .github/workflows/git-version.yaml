@@ -42,8 +42,8 @@ jobs:
         run: |
           current_branch="${{ github.ref }}"
           if [ "$current_branch" = "refs/heads/main" ]; then
-            echo "version=$(dotnet-gitversoin /showvariable Semver)" >> "$GITHUB_OUTPUT"
+            echo "version=$(dotnet-gitversion /showvariable Semver)" >> "$GITHUB_OUTPUT"
           else
-            echo "version=$(dotnet-gitversoin /showvariable Semver).$(dotnet-gitversoin /showvariable BuildMetaDataPadded)" >> "$GITHUB_OUTPUT"
+            echo "version=$(dotnet-gitversion /showvariable Semver).$(dotnet-gitversion /showvariable BuildMetaDataPadded)" >> "$GITHUB_OUTPUT"
           fi
           
