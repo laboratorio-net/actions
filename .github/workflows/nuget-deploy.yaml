@@ -18,13 +18,13 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: package
-          path: ./package
+          name: packages
+          path: ./packages
         
       - name: Publish NuGet packages
         run: |
           echo "Publishing NuGet packages..."
-          for file in ./package/*.nupkg; do
+          for file in ./packages/*.nupkg; do
             echo "Publishing $file"
             dotnet nuget push "$file" --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.nuget-api-key }}
           done
@@ -41,5 +41,5 @@ jobs:
       - name: Cleanup
         run: |
           echo "Cleaning up..."
-          rm -rf ./package
+          rm -rf ./packages
         working-directory: ${{ github.workspace }}
