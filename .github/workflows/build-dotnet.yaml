@@ -1,0 +1,69 @@
+name: Build Skd .NET
+
+on:
+  workflow_call:
+    inputs:
+      dotnet-version:
+        type: string
+        default: "8.0.x"   
+      solution-name:
+        type: string
+        required: true
+        description: Solution name
+      runs-on:
+        type: string
+        default: ubuntu-latest
+      create-packages:
+        type: boolean
+        default: false
+        description: Whether to create a NuGet package or not
+      package-version:
+        type: string
+        default: ""
+        description: Should be informed when "create-packages" is true, otherwise it will be ignored
+
+
+jobs:  
+  building:
+    name: .Net Building ${{ inputs.dotnet-version }}
+    runs-on: ${{ inputs.runs-on }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK ${{ inputs.dotnet-version }}
+        uses: actions/setup-dotnet@v3.2.0
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Restore packages
+        run: dotnet restore ${{ inputs.solution-name }} -v minimal
+        working-directory: ${{ github.workspace }}
+
+      - name: Build
+        run: dotnet build ${{ inputs.solution-name }} --configuration Release --no-restore
+        working-directory: ${{ github.workspace }}
+      
+      - name: Test
+        run: dotnet test ${{ inputs.solution-name }} --configuration Release --no-restore --no-build
+        working-directory: ${{ github.workspace }}
+
+      - name: Create NuGet package
+        if: ${{ inputs.create-packages }}
+        run: |
+          dotnet pack -p:VersionPrefix=${{ inputs.package-version }} -o ./packages -c Release --no-build ${{ inputs.solution-name }} 
+          cd ./packages
+          rm -rf $(ls | grep -vi $(echo ${{ inputs.solution-name }} |sed 's/\.sln$//'))
+          echo listing packages:
+          ls -la
+          cd ..
+        working-directory: ${{ github.workspace }}
+
+      # - name: Upload artifacts
+      #   if: ${{ inputs.create-packages }}
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: ./packages
