@@ -62,8 +62,8 @@ jobs:
           cd ..
         working-directory: ${{ github.workspace }}
 
-      # - name: Upload artifacts
-      #   if: ${{ inputs.create-packages }}
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: ./packages
+      - name: Upload artifacts
+        if: ${{ inputs.create-packages }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: ./packages
