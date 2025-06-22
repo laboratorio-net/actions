@@ -21,14 +21,14 @@ on:
         type: string
         default: ""
         description: Should be informed when "create-packages" is true, otherwise it will be ignored   
-      sonar-analyze:
-        type: boolean
-        default: false
-        description: Whether to run SonarCloud analysis or not
       sonar-organization:
         type: string
-        required: false
+        default: "laboratorio-net"
         description: SonarCloud organization
+      run-analysis:
+        type: boolean
+        default: true
+        description: Whether to run SonarCloud analysis or not
     secrets:
       sonar-token:
         required: false
@@ -52,14 +52,14 @@ jobs:
           dotnet-version: ${{ inputs.dotnet-version }}
 
       - name: Set up JDK 17 (required for SonarCloud)
-        if: ${{ inputs.sonar-analyze }}
+        if: ${{ inputs.run-analysis }}
         uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: 'zulu'
 
       - name: Cache SonarCloud packages
-        if: ${{ inputs.sonar-analyze }}
+        if: ${{ inputs.run-analysis }}
         uses: actions/cache@v4
         with:
           path: ~/.sonar/cache
@@ -67,7 +67,7 @@ jobs:
           restore-keys: ${{ runner.os }}-sonar
 
       - name: Install SonarCloud scanner
-        if: ${{ inputs.sonar-analyze }}
+        if: ${{ inputs.run-analysis }}
         run: |
           dotnet tool update dotnet-sonarscanner --tool-path .sonar/scanner
 
@@ -75,14 +75,14 @@ jobs:
         run: dotnet restore ${{ inputs.solution-name }} -v minimal
 
       - name: Generate Sonar Project Key
-        if: ${{ inputs.sonar-analyze }}
+        if: ${{ inputs.run-analysis }}
         id: sonar_key
         run: |
           key=$(basename "${{ inputs.solution-name }}" .sln | tr '[:upper:]' '[:lower:]' | tr '.' '-')
           echo "key=$key" >> $GITHUB_OUTPUT
 
       - name: Begin SonarCloud analysis
-        if: ${{ inputs.sonar-analyze }}
+        if: ${{ inputs.run-analysis }}
         env:
           SONAR_TOKEN: ${{ secrets.sonar-token }}
         run: |
@@ -99,10 +99,31 @@ jobs:
         run: dotnet test ${{ inputs.solution-name }} --configuration Release --no-restore --no-build
 
       - name: End SonarCloud analysis
-        if: ${{ inputs.sonar-analyze }}
+        if: ${{ inputs.run-analysis }}
         env:
           SONAR_TOKEN: ${{ secrets.sonar-token }}
         run: .sonar/scanner/dotnet-sonarscanner end /d:sonar.token="${{ secrets.sonar-token }}"
+
+      - name: Check for vulnerabilities
+        if: ${{ inputs.run-analysis }}
+        run: |
+          set -e
+
+          echo "🔍 Running vulnerability check..."
+          OUTPUT=$(dotnet list ${{ inputs.solution-name }} package --vulnerable --include-transitive || true)
+
+          echo "🔎 Vulnerability report:"
+          echo "$OUTPUT"
+
+          if echo "$OUTPUT" | grep -q "High\|Critical"; then
+            echo "❌ High or Critical vulnerabilities found. Failing the job."
+          elif echo "$OUTPUT" | grep -q "Moderate\|Low"; then
+            echo "⚠️ Vulnerabilities found (Low or Moderate severity). Check the report above."
+          else
+            echo "✅ No vulnerabilities found."
+          fi
+
+      
 
       - name: Create NuGet package
         if: ${{ inputs.create-packages }}
