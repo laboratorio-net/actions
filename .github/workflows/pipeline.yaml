@@ -1,0 +1,61 @@
+name: Continuos Integration Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  semantic-versioning:
+    uses: ./.github/workflows/git-version.yaml
+
+
+  create-stable-tag:
+    name: Create Stable Tag
+    runs-on: ubuntu-latest
+    needs: semantic-versioning    
+    env:
+      VERSION: v1
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          echo "Setting up Git..."
+          git config --global user.email "leandro.silva.alves86@gmail.com"
+          git config --global user.name "GitHub Action"
+
+      - name: Remove local tag ${{ env.VERSION }}
+        run: |
+          echo "Removing local tag ${{ env.VERSION }}"
+          git tag -d ${{ env.VERSION }} || true
+
+      - name: Recreate local tag ${{ env.VERSION }}
+        run: |
+          echo "Recreating local tag ${{ env.VERSION }}"
+          message=$(git log --oneline -n 1)
+          git tag ${{ env.VERSION }} -m "$message"
+
+      - name: Delete remote tag ${{ env.VERSION }}
+        run: |
+          echo "Deleting remote tag ${{ env.VERSION }}"
+          git push origin :${{ env.VERSION }} || true
+
+      - name: Push new remote tag ${{ env.VERSION }}
+        run: |
+          echo "Pushing remote tag ${{ env.VERSION }}"
+          git push origin ${{ env.VERSION }}
+
+  
+  create-semver-tag:
+    uses: ./.github/workflows/create-tag.yaml
+    needs: [semantic-versioning, create-stable-tag]
+    with:
+      version: ${{ needs.versioning.outputs.version }}
