@@ -6,6 +6,9 @@ on:
       runs-on:
         type: string
         default: ubuntu-latest
+      prefix-allowed-branch:
+        type: string
+        default: 'none'
     secrets:
       nuget-api-key:
         required: true
@@ -14,6 +17,7 @@ jobs:
   packing:  
     name: Publish NuGet Packages
     runs-on: ${{ inputs.runs-on }}
+    if: github.ref == 'refs/heads/main' || contains(github.ref, inputs.prefix-allowed-branch)
     
     steps:
       - uses: actions/download-artifact@v4
