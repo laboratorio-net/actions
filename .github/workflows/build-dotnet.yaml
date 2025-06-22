@@ -87,7 +87,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.sonar-token }}
         run: |
           .sonar/scanner/dotnet-sonarscanner begin \
-            /k:"${{ steps.sonar_key.outputs.key }}" \
+            /k:"${{ inputs.sonar-organization }}_${{ steps.sonar_key.outputs.key }}" \
             /o:"${{ inputs.sonar-organization }}" \
             /d:sonar.token="${{ secrets.sonar-token }}" \
             /d:sonar.host.url="https://sonarcloud.io"
