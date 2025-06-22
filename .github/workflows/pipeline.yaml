@@ -58,4 +58,4 @@ jobs:
     uses: ./.github/workflows/create-tag.yaml
     needs: [semantic-versioning, create-stable-tag]
     with:
-      version: ${{ needs.versioning.outputs.version }}
+      version: ${{ needs.semantic-versioning.outputs.version }}
