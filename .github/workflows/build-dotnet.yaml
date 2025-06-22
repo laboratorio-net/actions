@@ -1,11 +1,11 @@
-name: Build Skd .NET
+name: Build, Test, Analyze and Package .NET
 
 on:
   workflow_call:
     inputs:
       dotnet-version:
         type: string
-        default: "8.0.x"   
+        default: "8.0.x"
       solution-name:
         type: string
         required: true
@@ -20,47 +20,99 @@ on:
       package-version:
         type: string
         default: ""
-        description: Should be informed when "create-packages" is true, otherwise it will be ignored
+        description: Should be informed when "create-packages" is true, otherwise it will be ignored   
+      sonar-analyze:
+        type: boolean
+        default: false
+        description: Whether to run SonarCloud analysis or not
+      sonar-organization:
+        type: string
+        required: false
+        description: SonarCloud organization
+    secrets:
+      sonar-token:
+        required: false
+        description: SonarCloud API key
+      
 
-
-jobs:  
-  building:
-    name: .Net Building ${{ inputs.dotnet-version }}
+jobs:
+  build-test-analyze-package:
+    name: Build, Test, Analyze and Package
     runs-on: ${{ inputs.runs-on }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup .NET SDK ${{ inputs.dotnet-version }}
-        uses: actions/setup-dotnet@v3.2.0
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
 
+      - name: Set up JDK 17 (required for SonarCloud)
+        if: ${{ inputs.sonar-analyze }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'zulu'
+
+      - name: Cache SonarCloud packages
+        if: ${{ inputs.sonar-analyze }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Install SonarCloud scanner
+        if: ${{ inputs.sonar-analyze }}
+        run: |
+          dotnet tool update dotnet-sonarscanner --tool-path .sonar/scanner
+
       - name: Restore packages
         run: dotnet restore ${{ inputs.solution-name }} -v minimal
-        working-directory: ${{ github.workspace }}
+
+      - name: Generate Sonar Project Key
+        if: ${{ inputs.sonar-analyze }}
+        id: sonar_key
+        run: |
+          key=$(basename "${{ inputs.solution-name }}" .sln | tr '[:upper:]' '[:lower:]' | tr '.' '-')
+          echo "key=$key" >> $GITHUB_OUTPUT
+
+      - name: Begin SonarCloud analysis
+        if: ${{ inputs.sonar-analyze }}
+        env:
+          SONAR_TOKEN: ${{ secrets.sonar-token }}
+        run: |
+          .sonar/scanner/dotnet-sonarscanner begin \
+            /k:"${{ steps.sonar_key.outputs.key }}" \
+            /o:"${{ inputs.sonar-organization }}" \
+            /d:sonar.token="${{ secrets.sonar-token }}" \
+            /d:sonar.host.url="https://sonarcloud.io"
 
       - name: Build
         run: dotnet build ${{ inputs.solution-name }} --configuration Release --no-restore
-        working-directory: ${{ github.workspace }}
-      
+
       - name: Test
         run: dotnet test ${{ inputs.solution-name }} --configuration Release --no-restore --no-build
-        working-directory: ${{ github.workspace }}
+
+      - name: End SonarCloud analysis
+        if: ${{ inputs.sonar-analyze }}
+        env:
+          SONAR_TOKEN: ${{ secrets.sonar-token }}
+        run: .sonar/scanner/dotnet-sonarscanner end /d:sonar.token="${{ secrets.sonar-token }}"
 
       - name: Create NuGet package
         if: ${{ inputs.create-packages }}
         run: |
-          dotnet pack -p:VersionPrefix=${{ inputs.package-version }} -o ./packages -c Release --no-build ${{ inputs.solution-name }} 
+          dotnet pack -p:VersionPrefix=${{ inputs.package-version }} -o ./packages -c Release --no-build ${{ inputs.solution-name }}
           cd ./packages
           rm -rf $(ls | grep -vi $(echo ${{ inputs.solution-name }} |sed 's/\.sln$//'))
           echo listing packages:
           ls -la
           cd ..
-        working-directory: ${{ github.workspace }}
 
       - name: Upload artifacts
         if: ${{ inputs.create-packages }}
