@@ -105,7 +105,6 @@ jobs:
         run: .sonar/scanner/dotnet-sonarscanner end /d:sonar.token="${{ secrets.sonar-token }}"
 
       - name: Check for vulnerabilities
-        if: ${{ inputs.run-analysis }}
         run: |
           set -e
 
@@ -117,6 +116,7 @@ jobs:
 
           if echo "$OUTPUT" | grep -q "High\|Critical"; then
             echo "❌ High or Critical vulnerabilities found. Failing the job."
+            exit 1
           elif echo "$OUTPUT" | grep -q "Moderate\|Low"; then
             echo "⚠️ Vulnerabilities found (Low or Moderate severity). Check the report above."
           else
