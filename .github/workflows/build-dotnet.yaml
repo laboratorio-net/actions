@@ -90,13 +90,15 @@ jobs:
             /k:"${{ inputs.sonar-organization }}_${{ steps.sonar_key.outputs.key }}" \
             /o:"${{ inputs.sonar-organization }}" \
             /d:sonar.token="${{ secrets.sonar-token }}" \
-            /d:sonar.host.url="https://sonarcloud.io"
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.cs.opencover.reportsPaths="**/*.opencover.xml" \
+            /d:sonar.scanner.scanAll=false
 
       - name: Build
         run: dotnet build ${{ inputs.solution-name }} --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test ${{ inputs.solution-name }} --configuration Release --no-restore --no-build
+        run: dotnet test ${{ inputs.solution-name }} --configuration Release --no-restore --no-build --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
       - name: End SonarCloud analysis
         if: ${{ inputs.run-analysis }}
