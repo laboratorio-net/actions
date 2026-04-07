@@ -69,7 +69,8 @@ jobs:
       - name: Install SonarCloud scanner
         if: ${{ inputs.run-analysis }}
         run: |
-          dotnet tool update dotnet-sonarscanner --tool-path .sonar/scanner
+          DOTNET_MAJOR=$(echo "${{ inputs.dotnet-version }}" | cut -d'.' -f1)
+          dotnet tool update dotnet-sonarscanner --tool-path .sonar/scanner --framework "net${DOTNET_MAJOR}.0"
 
       - name: Restore packages
         run: dotnet restore ${{ inputs.solution-name }} -v minimal
