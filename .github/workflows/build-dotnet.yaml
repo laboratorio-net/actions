@@ -82,17 +82,30 @@ jobs:
           key=$(basename "${{ inputs.solution-name }}" .sln | tr '[:upper:]' '[:lower:]' | tr '.' '-')
           echo "key=$key" >> $GITHUB_OUTPUT
 
+      - name: Generate Sonar Project Name
+        if: ${{ inputs.run-analysis }}
+        id: sonar_project
+        run: |
+          name="${{ inputs.sonar-organization }}_${{ steps.sonar_key.outputs.key }}"
+          echo "name=$name" >> $GITHUB_OUTPUT
+
       - name: Ensure Sonar Project Exists
         if: ${{ inputs.run-analysis }}
         run: |
           curl -X POST -u "${{ secrets.sonar-token }}:" \
-            "https://sonarcloud.io/api/projects/create?name=${{ steps.sonar_key.outputs.key }}&organization=${{ inputs.sonar-organization }}&project=${{ inputs.sonar-organization }}_${{ steps.sonar_key.outputs.key }}"
+            "https://sonarcloud.io/api/projects/create?name=${{ steps.sonar_key.outputs.key }}&organization=${{ inputs.sonar-organization }}&project=${{ steps.sonar_project.outputs.name }}"
       
       - name: Set Sonar Default Branch
         if: ${{ inputs.run-analysis }}
         run: |
           curl -X POST -u "${{ secrets.sonar-token }}:" \
-            "https://sonarcloud.io/api/project_branches/rename?project=${{ inputs.sonar-organization }}_${{ steps.sonar_key.outputs.key }}&name=main"
+            "https://sonarcloud.io/api/project_branches/rename?project=${{ steps.sonar_project.outputs.name }}&name=main"
+
+      - name: Set New Code Periods
+        if: ${{ inputs.run-analysis }}
+        run: |
+          curl -X POST -u "${{ secrets.sonar-token }}:" \
+            "https://sonarcloud.io/api/new_code_periods/set?project=${{ steps.sonar_project.outputs.name }}&type=PREVIOUS_VERSION"
 
 
       - name: Begin SonarCloud analysis
