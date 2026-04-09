@@ -101,12 +101,6 @@ jobs:
           curl -X POST -u "${{ secrets.sonar-token }}:" \
             "https://sonarcloud.io/api/project_branches/rename?project=${{ steps.sonar_project.outputs.name }}&name=main"
 
-      - name: Set New Code Periods
-        if: ${{ inputs.run-analysis }}
-        run: |
-          curl -X POST -u "${{ secrets.sonar-token }}:" \
-            "https://sonarcloud.io/api/new_code_periods/set?project=${{ steps.sonar_project.outputs.name }}&type=PREVIOUS_VERSION"
-
 
       - name: Begin SonarCloud analysis
         if: ${{ inputs.run-analysis }}
@@ -119,7 +113,8 @@ jobs:
             /d:sonar.token="${{ secrets.sonar-token }}" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.cs.opencover.reportsPaths="**/*.opencover.xml" \
-            /d:sonar.scanner.scanAll=false
+            /d:sonar.scanner.scanAll=false \
+            /v:"${{ inputs.package-version }}" 
 
       - name: Build
         run: dotnet build ${{ inputs.solution-name }} --configuration Release --no-restore
