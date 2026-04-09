@@ -87,6 +87,13 @@ jobs:
         run: |
           curl -X POST -u "${{ secrets.sonar-token }}:" \
             "https://sonarcloud.io/api/projects/create?name=${{ steps.sonar_key.outputs.key }}&organization=${{ inputs.sonar-organization }}&project=${{ inputs.sonar-organization }}_${{ steps.sonar_key.outputs.key }}"
+      
+      - name: Set Sonar Default Branch
+        if: ${{ inputs.run-analysis }}
+        run: |
+          curl -X POST -u "${{ secrets.sonar-token }}:" \
+            "https://sonarcloud.io/api/project_branches/rename?project=${{ inputs.sonar-organization }}_${{ steps.sonar_key.outputs.key }}&name=main"
+
 
       - name: Begin SonarCloud analysis
         if: ${{ inputs.run-analysis }}
