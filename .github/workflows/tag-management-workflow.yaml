@@ -1,0 +1,116 @@
+name: Tag Management Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag-version:
+        description: "Versão da tag estável a ser criada ou recriada. Exemplo: v1, v2, v3"
+        required: true
+        type: string
+      dry-run:
+        description: "Simula as operações sem aplicá-las. Nenhuma tag será criada, removida ou atualizada"
+        required: false
+        type: boolean
+        default: false
+      force:
+        description: "Permite sobrescrever uma tag existente. Obrigatório quando a tag já existe"
+        required: false
+        type: boolean
+        default: false
+      runs-on:
+        description: "Runner a ser utilizado"
+        required: false
+        type: string
+        default: ubuntu-latest
+
+jobs:
+  manage-tag:
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validação de branch
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "Este workflow só pode ser executado na branch main." >&2
+            exit 1
+          fi
+
+      - name: Configuração do Git
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+      - name: Validação do formato da tag
+        run: |
+          TAG_VERSION="${{ inputs.tag-version }}"
+          if ! [[ "$TAG_VERSION" =~ ^v[0-9]+$ ]]; then
+            echo "Formato inválido: '$TAG_VERSION'. Use o padrão vN (ex: v1, v2, v3)." >&2
+            exit 1
+          fi
+          CURRENT_COMMIT=$(git rev-parse HEAD)
+          echo "CURRENT_COMMIT=$CURRENT_COMMIT" >> "$GITHUB_ENV"
+
+      - name: Verificação de existência da tag remota
+        run: |
+          TAG_VERSION="${{ inputs.tag-version }}"
+          if git ls-remote --tags origin "refs/tags/$TAG_VERSION" | grep -q .; then
+            echo "TAG_EXISTS=true" >> "$GITHUB_ENV"
+            PREVIOUS_COMMIT=$(git ls-remote --tags origin "refs/tags/$TAG_VERSION" | awk '{print $1}')
+            echo "PREVIOUS_COMMIT=$PREVIOUS_COMMIT" >> "$GITHUB_ENV"
+          else
+            echo "TAG_EXISTS=false" >> "$GITHUB_ENV"
+            echo "PREVIOUS_COMMIT=" >> "$GITHUB_ENV"
+          fi
+
+      - name: Validação de proteção contra sobrescrita
+        run: |
+          if [ "$TAG_EXISTS" = "true" ] && [ "${{ inputs.force }}" = "false" ]; then
+            echo "A tag '${{ inputs.tag-version }}' já existe. Defina force: true para sobrescrever." >&2
+            exit 1
+          fi
+
+      - name: Log de auditoria / dry-run summary
+        run: |
+          if [ "$TAG_EXISTS" = "true" ]; then
+            OPERATION="RECREATE"
+          else
+            OPERATION="CREATE"
+          fi
+
+          echo "[AUDIT] Actor: ${{ github.actor }}"
+          echo "[AUDIT] Operation: $OPERATION"
+          echo "[AUDIT] Tag: ${{ inputs.tag-version }}"
+          if [ "$OPERATION" = "RECREATE" ]; then
+            echo "[AUDIT] Previous commit: $PREVIOUS_COMMIT"
+            echo "[AUDIT] New commit: $CURRENT_COMMIT"
+          else
+            echo "[AUDIT] Commit: $CURRENT_COMMIT"
+          fi
+
+          if [ "${{ inputs.dry-run }}" = "true" ]; then
+            echo "[DRY-RUN] Would $OPERATION tag ${{ inputs.tag-version }}"
+            echo "[DRY-RUN] Target commit: $CURRENT_COMMIT"
+            echo "[DRY-RUN] No changes applied."
+            exit 0
+          fi
+
+      - name: Remoção da tag local e remota
+        if: env.TAG_EXISTS == 'true'
+        run: |
+          git push origin --delete "${{ inputs.tag-version }}"
+          git tag -d "${{ inputs.tag-version }}"
+
+      - name: Criação e push da nova tag
+        run: |
+          git tag "${{ inputs.tag-version }}"
+          git push origin "${{ inputs.tag-version }}"
+
+      - name: Registro de conclusão no log
+        run: |
+          echo "Tag '${{ inputs.tag-version }}' criada com sucesso."
+          echo "Commit: $CURRENT_COMMIT"
+          echo "Actor: ${{ github.actor }}"
